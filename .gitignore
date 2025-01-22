@@ -6,3 +6,4 @@ docker/wasi-sdk
 docker/clangd
 docker/hook-cleaner
 wasi-sdk.ts
+qjsc
