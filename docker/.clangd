@@ -1,3 +1,0 @@
-Security:
-  AccessibleDirectories: [ "/work/c", "/usr/include", "/usr/lib/clang" ]
-

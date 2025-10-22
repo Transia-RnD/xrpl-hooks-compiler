@@ -5,8 +5,7 @@ import fastifyWebSocket from 'fastify-websocket';
 import * as ws from 'ws';
 import * as rpc from 'vscode-ws-jsonrpc';
 import * as rpcServer from 'vscode-ws-jsonrpc/lib/server';
-import { build_project as build_c_project, requestBodySchema as requestCBodySchema, RequestBody as RequestCBody } from './chooks';
-import { build_project as build_js_project, requestBodySchema as requestJSBodySchema, RequestBody as RequestJSBody } from './jshooks';
+import { build_project, requestBodySchema as requestCBodySchema, RequestBody as RequestCBody } from './rust';
 
 const server = fastify();
 
@@ -50,31 +49,7 @@ server.post('/api/build', async (req, reply) => {
   }
   try {
     console.log('Building in ', baseName);
-    const result = build_c_project(body, baseName);
-    return reply.code(200).send(result);
-  } catch (ex) {
-    console.error(ex);
-    return reply.code(500).send(`500 Internal server error: ${ex}`)
-  }
-  // return reply.code(200).send({ hello: 'world' });
-});
-
-server.post('/api/build/js', async (req, reply) => {
-  // Bail out early if not HTTP POST
-  if (req.method !== 'POST') {
-    return reply.code(405).send('405 Method Not Allowed');
-  }
-  const baseName = tempDir + '/build_' + Math.random().toString(36).slice(2);
-  let body: RequestJSBody | undefined;
-  try {
-    body = requestJSBodySchema.parse(req.body);
-  } catch (err) {
-    console.log(err)
-    return reply.code(400).send('400 Bad Request')
-  }
-  try {
-    console.log('Building in ', baseName);
-    const result = build_js_project(body, baseName);
+    const result = build_project(body, baseName);
     return reply.code(200).send(result);
   } catch (ex) {
     console.error(ex);
@@ -101,39 +76,28 @@ function toSocket(webSocket: ws): rpc.IWebSocket {
   }
 }
 
-server.get('/language-server/c', { websocket: true }, (connection /* SocketStream */, req /* FastifyRequest */) => {
-  let localConnection = rpcServer.createServerProcess('Clangd process', 'clangd', ['--compile-commands-dir=/etc/clangd', '--limit-results=200']);
+server.get('/language-server/rust', { websocket: true }, (connection /* SocketStream */, req /* FastifyRequest */) => {
+  let localConnection = rpcServer.createServerProcess(
+    'Rust Analyzer process', 
+    'rust-analyzer', 
+    [
+      '--log-file', '/tmp/rust-analyzer.log'
+    ]
+  );
   let socket: rpc.IWebSocket = toSocket(connection.socket);
   let newConnection = rpcServer.createWebSocketConnection(socket);
   rpcServer.forward(newConnection, localConnection);
-  console.log(`Forwarding new client`);
+  console.log(`Forwarding new Rust client`);
+  
   socket.onClose((code, reason) => {
-    console.log('Client closed', reason);
+    console.log('Rust client closed', reason);
     try {
       localConnection.dispose();
     } catch (err) {
       console.log(err)
     }
   });
-  // connection.socket.on('message', message => {
-  //   // message.toString() === 'hi from client'
-  //   connection.socket.send('hi from server')
-  // })
-})
-
-server.get('/api/header-files', async (req, reply) => {
-  const dirPath = './clang/includes';
-  var files = new Map<string, string>();
-  readdirSync(dirPath).forEach(fname => {
-    const nameExt = fname.split('.');
-    if ((nameExt.length === 2) && nameExt[0] && (nameExt[1].toLowerCase() === 'h')) {
-      const content = readFileSync(dirPath + '/' + fname);
-      files.set(nameExt[0], content.toString());
-    }
-  });
-  const rsp = Object.fromEntries(files);
-  reply.code(200).send(rsp);
-})
+});
 
 server.listen(process.env.PORT || 9000, process.env.HOST || '::', (err, address) => {
   if (err) {

@@ -1,5 +1,5 @@
 {
-  "name": "hooks-compile-api",
+  "name": "craft-compile-api",
   "version": "1.0.0",
   "main": "dist/index.js",
   "license": "MIT",
@@ -11,7 +11,7 @@
     "typescript": "^4.4.4"
   },
   "scripts": {
-    "start": "node ./src/index.ts",
+    "start": "ts-node ./src/index.ts",
     "dev": "ts-node-dev --respawn ./src/index.ts",
     "build": "tsc"
   },

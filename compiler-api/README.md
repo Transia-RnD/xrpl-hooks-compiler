@@ -1,6 +1,6 @@
-# API that compiles C / JS code to WASM
+# API that compiles Rust code to WASM
 
-This directory contains a webserver for a C / JS to WASM compiler and
+This directory contains a webserver for a Rust to WASM compiler and
 Language Server (i.e. interactive linting).  Server is built with
 [Fastify](https://www.fastify.io/), fast and low overhead framework
 for Node.js
@@ -14,7 +14,6 @@ post-processing), Language Server is clangd connected over WebSocket.
 If you want to try this project follow these steps:
 
 - Install JS dependencies by running `yarn` or `yarn install` you can use npm as well
-- Install Hook API headers by running `./copyheaders.sh` as root
 - Install native dependencies (wasi-sdk & clangd) as automated by the docker container construction in the parent directory and run `yarn dev` here; alternatively, just run the docker instance from ../docker
 
 This should start server at port `:9000`, the actual compiling endpoint is this:
@@ -30,8 +29,8 @@ You can send for example following payload to endpoint:
   "compress": true,
   "files": [
     {
-      "type": "c",
-      "name": "file.c",
+      "type": "rs",
+      "name": "file.rs",
       "options": "-O3",
       "src": "#include..."
     }
@@ -57,3 +56,16 @@ Payload itself is quite self-explanatory, but the code you want to compile is un
 ```
 
 Output contains compiled wasm file base64 encoded.
+
+
+# Install Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install rust-analyzer
+rustup component add rust-analyzer
+
+# Install WASM target (if you want WASM support)
+rustup target add wasm32-unknown-unknown
+
+# Install wasm-bindgen CLI (optional, for WASM bindings)
+cargo install wasm-bindgen-cli
