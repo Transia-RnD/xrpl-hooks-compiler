@@ -1,6 +1,6 @@
 import fastify from 'fastify';
 import { readFileSync, readdirSync } from "fs";
-import fastifyCors from 'fastify-cors';
+import cors from '@fastify/cors';
 import fastifyWebSocket from 'fastify-websocket';
 import * as ws from 'ws';
 import * as rpc from 'vscode-ws-jsonrpc';
@@ -9,8 +9,7 @@ import { build_project, requestBodySchema as requestCBodySchema, RequestBody as 
 
 const server = fastify();
 
-server.register(fastifyCors, {
-  // put your options here
+server.register(cors, {
   origin: '*'
 })
 server.register(fastifyWebSocket);
