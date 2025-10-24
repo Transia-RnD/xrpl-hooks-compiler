@@ -16,7 +16,6 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@fastify/cors": "^11.1.0",
     "fastify": "^3.22.1",
     "fastify-cors": "^6.0.2",
     "fastify-websocket": "^4.0.0",

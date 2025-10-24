@@ -1,6 +1,7 @@
 import fastify from 'fastify';
 import { readFileSync, readdirSync } from "fs";
-import cors from '@fastify/cors';
+import fastifyCors from 'fastify-cors';
+// @ts-ignore
 import fastifyWebSocket from 'fastify-websocket';
 import * as ws from 'ws';
 import * as rpc from 'vscode-ws-jsonrpc';
@@ -9,7 +10,8 @@ import { build_project, requestBodySchema as requestCBodySchema, RequestBody as 
 
 const server = fastify();
 
-server.register(cors, {
+server.register(fastifyCors, {
+  // put your options here
   origin: '*'
 })
 server.register(fastifyWebSocket);
@@ -61,21 +63,50 @@ server.get('/', async (req, reply) => {
   reply.code(200).send('ok')
 })
 
-function toSocket(webSocket: ws): rpc.IWebSocket {
+function toSocket(webSocket: any): rpc.IWebSocket {
   return {
     send: content => webSocket.send(content),
-    onMessage: cb => webSocket.onmessage = event => cb(event.data),
-    onError: cb => webSocket.onerror = event => {
-      if ('message' in event) {
-        cb((event as any).message)
+    onMessage: cb => {
+      // support both ws (EventEmitter) and browser-like websockets
+      if (typeof webSocket.on === 'function') {
+        webSocket.on('message', (data: any) => {
+          // ws delivers raw data (Buffer/string), match expected cb signature
+          cb(data);
+        });
+      } else {
+        webSocket.onmessage = (event: any) => cb(event.data);
       }
     },
-    onClose: cb => webSocket.onclose = event => cb(event.code, event.reason),
-    dispose: () => webSocket.close()
+    onError: cb => {
+      if (typeof webSocket.on === 'function') {
+        webSocket.on('error', (err: any) => cb(err && err.message ? err.message : err));
+      } else {
+        webSocket.onerror = (event: any) => {
+          if ('message' in event) {
+            cb((event as any).message)
+          }
+        };
+      }
+    },
+    onClose: cb => {
+      if (typeof webSocket.on === 'function') {
+        webSocket.on('close', (code: number, reason: any) => {
+          const reasonStr = reason && typeof reason.toString === 'function' ? reason.toString() : String(reason);
+          cb(code, reasonStr);
+        });
+      } else {
+        webSocket.onclose = (event: any) => cb(event.code, event.reason);
+      }
+    },
+    dispose: () => {
+      try {
+        if (typeof webSocket.close === 'function') webSocket.close();
+      } catch (e) {}
+    }
   }
 }
 
-server.get('/language-server/rust', { websocket: true }, (connection /* SocketStream */, req /* FastifyRequest */) => {
+server.get('/language-server/rust', { websocket: true } as any, (connection /* SocketStream */, req /* FastifyRequest */) => {
   let localConnection = rpcServer.createServerProcess(
     'Rust Analyzer process', 
     'rust-analyzer', 
