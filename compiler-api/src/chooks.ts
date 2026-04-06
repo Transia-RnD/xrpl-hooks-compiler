@@ -41,7 +41,8 @@ export const requestBodySchema = z.object({
   ).optional(),
   link_options: z.string().optional(),
   compress: z.boolean().optional(),
-  strip: z.boolean().optional()
+  strip: z.boolean().optional(),
+  functions: z.boolean().optional()
 });
 
 export type RequestBody = z.infer<typeof requestBodySchema>;
@@ -255,6 +256,7 @@ export function build_project(project: RequestBody, base: string) {
   const output = project.output;
   const compress = project.compress;
   const strip = project.strip;
+  const functions = project.functions;
   let build_result: ResponseData = {
     success: false,
     message: '',
@@ -358,17 +360,17 @@ export function build_project(project: RequestBody, base: string) {
     }
   }
 
-  if (strip) {
-    const clean_obj = {
-      name: 'cleaning wasm'
-    };
-    build_result.tasks.push(clean_obj);
-    if (!clean_wasm(dir, result, clean_obj)) {
-      return complete(false, 'Pass 1 Clean error');
-    }
-  }
+  // if (strip) {
+  //   const clean_obj = {
+  //     name: 'cleaning wasm'
+  //   };
+  //   build_result.tasks.push(clean_obj);
+  //   if (!clean_wasm(dir, result, clean_obj)) {
+  //     return complete(false, 'Pass 1 Clean error');
+  //   }
+  // }
 
-  if (opt_options) {
+  if (!functions && opt_options) {
     const opt_obj = {
       name: 'optimizing wasm'
     };
@@ -388,12 +390,17 @@ export function build_project(project: RequestBody, base: string) {
   //   }
   // }
 
-  const guard_result_obj = {
-    name: 'guard checking wasm'
-  };
-  build_result.tasks.push(guard_result_obj);
-  if (!guard_check_wasm(dir, result, guard_result_obj)) {
-    return complete(false, 'Guard checking error');
+  console.log(functions);
+  
+
+  if (!functions) {
+    const guard_result_obj = {
+      name: 'guard checking wasm'
+    };
+    build_result.tasks.push(guard_result_obj);
+    if (!guard_check_wasm(dir, result, guard_result_obj)) {
+      return complete(false, 'Guard checking error');
+    }
   }
 
   build_result.output = serialize_file_data(result, compress || false);
